@@ -250,29 +250,6 @@ async def receive_tradingview_alert(request: Request):
         )
 
 
-@app.post("/test/dingtalk")
-async def test_dingtalk_connection():
-    """
-    Test DingTalk webhook connection
-    
-    Returns:
-        dict: Test result
-    """
-    test_alert = TradingViewAlert(
-        symbol="TEST",
-        action="BUY",
-        price=100.0,
-        message="This is a test message from TradingView Alert Monitor"
-    )
-    
-    success = dingtalk_service.send_message(test_alert)
-    
-    return {
-        "status": "success" if success else "failed",
-        "message": "Test message sent" if success else "Failed to send test message"
-    }
-
-
 if __name__ == "__main__":
     import uvicorn
     
