@@ -11,9 +11,9 @@ Date: 2025
 """
 
 import logging
-from datetime import datetime
 import json
 import requests
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request
 import uvicorn
 
@@ -56,26 +56,28 @@ async def receive_tradingview_alert(request: Request):
         client_ip = request.client.host
         raw_data = await request.body()
         
+        # Get current timestamp for logging
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         # Try to parse as JSON first, fallback to text
         try:
             data = json.loads(raw_data.decode('utf-8'))
             logger.info(f"Received JSON data from {client_ip}: {data}")
-            # Format JSON data for DingTalk
+            # Format JSON data for DingTalk - keep original format
             if isinstance(data, dict):
-                message_content = "📊 TradingView Alert\n\n"
-                for key, value in data.items():
-                    message_content += f"• {key}: {value}\n"
+                if data:  # Check if dict is not empty
+                    message_content = ""
+                    for key, value in data.items():
+                        message_content += f"{key}: {value}\n"
+                else:
+                    message_content = "{}"  # Empty dict
             else:
-                message_content = f"📊 TradingView Alert\n\n{json.dumps(data, indent=2)}"
+                message_content = json.dumps(data, indent=2)
         except:
             # If not JSON, treat as plain text
             data = raw_data.decode('utf-8')
             logger.info(f"Received text data from {client_ip}: {data}")
-            message_content = f"📊 TradingView Alert\n\n{data}"
-        
-        # Add timestamp
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        message_content += f"\n⏰ Time: {timestamp}"
+            message_content = data if data.strip() else "Empty message"
         
         # Prepare DingTalk message payload
         payload = {
