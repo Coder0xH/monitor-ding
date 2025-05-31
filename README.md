@@ -49,77 +49,6 @@ python main.py
 
 服务将在 `http://localhost:8000` 启动。
 
-## API接口
-
-### 1. 健康检查
-
-```
-GET /
-```
-
-返回服务状态信息。
-
-### 2. TradingView警报接收
-
-```
-POST /webhook/tradingview
-```
-
-接收TradingView警报数据并转发到钉钉。
-
-**请求体示例：**
-
-```json
-{
-    "symbol": "BTCUSDT",
-    "action": "BUY",
-    "price": 45000.0,
-    "message": "突破阻力位"
-}
-```
-
-**响应示例：**
-
-```json
-{
-    "status": "success",
-    "message": "Alert sent to DingTalk successfully",
-    "alert_id": "BTCUSDT_2024-01-01T12:00:00"
-}
-```
-
-### 3. 钉钉连接测试
-
-```
-POST /test/dingtalk
-```
-
-测试钉钉webhook连接是否正常。
-
-## 配置说明
-
-### 钉钉Webhook配置
-
-在 `main.py` 中修改 `DINGTALK_WEBHOOK_URL` 变量：
-
-```python
-DINGTALK_WEBHOOK_URL = "https://oapi.dingtalk.com/robot/send?access_token=YOUR_ACCESS_TOKEN"
-```
-
-### TradingView配置
-
-1. 在TradingView中创建警报
-2. 设置Webhook URL为：`http://your-server:8000/webhook/tradingview`
-3. 配置警报消息格式为JSON：
-
-```json
-{
-    "symbol": "{{ticker}}",
-    "action": "{{strategy.order.action}}",
-    "price": {{close}},
-    "message": "{{strategy.order.comment}}"
-}
-```
 
 ## 消息格式
 
@@ -142,7 +71,6 @@ DINGTALK_WEBHOOK_URL = "https://oapi.dingtalk.com/robot/send?access_token=YOUR_A
 启动服务后，访问以下地址查看自动生成的API文档：
 
 - Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
 
 ### 日志
 
@@ -159,9 +87,6 @@ DINGTALK_WEBHOOK_URL = "https://oapi.dingtalk.com/robot/send?access_token=YOUR_A
 ```bash
 # 测试健康检查
 curl http://localhost:8000/
-
-# 测试钉钉连接
-curl -X POST http://localhost:8000/test/dingtalk
 
 # 测试警报接收
 curl -X POST http://localhost:8000/webhook/tradingview \
@@ -212,4 +137,4 @@ MIT License
 
 ## 作者
 
-Dexter - 2024# monitor-ding
+Dexter - 2025# monitor-ding
