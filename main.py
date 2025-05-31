@@ -159,12 +159,12 @@ async def root():
 
 
 @app.post("/webhook/tradingview")
-async def receive_tradingview_alert(alert: TradingViewAlert, request: Request):
+async def receive_tradingview_alert(request: Request):
     """
     Receive TradingView alert and forward to DingTalk
+    Accept any data format and forward as-is
     
     Args:
-        alert (TradingViewAlert): Alert data from TradingView
         request (Request): FastAPI request object
         
     Returns:
@@ -174,25 +174,74 @@ async def receive_tradingview_alert(alert: TradingViewAlert, request: Request):
         HTTPException: If alert processing fails
     """
     try:
-        # Log incoming alert
+        # Get raw request data
         client_ip = request.client.host
-        logger.info(f"Received alert from {client_ip}: {alert.symbol} - {alert.action}")
+        raw_data = await request.body()
         
-        # Send to DingTalk
-        success = dingtalk_service.send_message(alert)
+        # Try to parse as JSON first, fallback to text
+        try:
+            import json
+            data = json.loads(raw_data.decode('utf-8'))
+            logger.info(f"Received JSON data from {client_ip}: {data}")
+            # Format JSON data for DingTalk
+            if isinstance(data, dict):
+                message_content = "📊 TradingView Alert\n\n"
+                for key, value in data.items():
+                    message_content += f"• {key}: {value}\n"
+            else:
+                message_content = f"📊 TradingView Alert\n\n{json.dumps(data, indent=2)}"
+        except:
+            # If not JSON, treat as plain text
+            data = raw_data.decode('utf-8')
+            logger.info(f"Received text data from {client_ip}: {data}")
+            message_content = f"📊 TradingView Alert\n\n{data}"
         
-        if success:
-            return {
-                "status": "success",
-                "message": "Alert sent to DingTalk successfully",
-                "alert_id": f"{alert.symbol}_{alert.time}"
+        # Add timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        message_content += f"\n⏰ Time: {timestamp}"
+        
+        # Prepare DingTalk message payload
+        payload = {
+            "msgtype": "text",
+            "text": {
+                "content": message_content
             }
+        }
+        
+        # Send directly to DingTalk
+        response = requests.post(
+            DINGTALK_WEBHOOK_URL,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('errcode') == 0:
+                logger.info(f"Successfully sent alert to DingTalk")
+                return {
+                    "status": "success",
+                    "message": "Alert sent to DingTalk successfully",
+                    "received_data": data,
+                    "timestamp": timestamp
+                }
+            else:
+                logger.error(f"DingTalk API error: {result.get('errmsg')}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"DingTalk API error: {result.get('errmsg')}"
+                )
         else:
+            logger.error(f"HTTP error {response.status_code}: {response.text}")
             raise HTTPException(
                 status_code=500,
-                detail="Failed to send alert to DingTalk"
+                detail=f"HTTP error {response.status_code}"
             )
             
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing alert: {str(e)}")
         raise HTTPException(
@@ -231,7 +280,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=80,
         reload=True,
         log_level="info"
     )
