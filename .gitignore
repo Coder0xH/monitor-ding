@@ -9,3 +9,5 @@ wheels/
 # Virtual environments
 .venv
 .Ds_store
+.vscode
+.env
